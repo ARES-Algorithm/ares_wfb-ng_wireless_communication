@@ -6,3 +6,7 @@ build/
 config/keys/*.key
 compile_commands.json
 .cache/
+
+__pycache__/
+
+captures/

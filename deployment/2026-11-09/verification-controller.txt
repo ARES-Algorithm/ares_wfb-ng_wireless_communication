@@ -1,0 +1,36 @@
+2026-11-09T16:49:25+08:00
+gracekite-Laptop
+active
+active
+Interface wlx140a022213ac
+	ifindex 3
+	wdev 0x100000001
+	addr 14:0a:02:22:13:ac
+	type monitor
+	wiphy 1
+	channel 165 (5825 MHz), width: 20 MHz (no HT), center1: 5825 MHz
+	txpower 19.00 dBm
+/proc/sys/net/ipv6/conf/Mihomo/disable_ipv6=0
+/proc/sys/net/ipv6/conf/all/disable_ipv6=0
+/proc/sys/net/ipv6/conf/default/disable_ipv6=0
+/proc/sys/net/ipv6/conf/lo/disable_ipv6=0
+/proc/sys/net/ipv6/conf/wlp0s20f3/disable_ipv6=0
+/proc/sys/net/ipv6/conf/wlx140a022213ac/disable_ipv6=0
+Nov 09 16:49:24 gracekite-Laptop oal_controller[29759]: 16:49:24.627 INFO  [controller] rx debug: t=80.150 mode=1 estop=0 axes=[0.00 0.00 0.00 0.00]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.032 INFO  [controller] rx debug: t=80.355 mode=1 estop=0 axes=[0.00 0.00 0.00 0.00]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.032 INFO  [controller] rx debug: t=80.555 mode=1 estop=0 axes=[0.00 0.00 0.00 0.00]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.237 INFO  [controller] rx debug: t=80.760 mode=1 estop=0 axes=[0.00 0.00 0.00 0.00]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.442 INFO  [controller] rx debug: t=80.965 mode=1 estop=0 axes=[0.00 0.00 0.00 0.00]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.502 INFO  [controller] telemetry rx=   200pps     589kbps tx=     0pps       0kbps loss= 0.12% lost=2 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.502 INFO  [controller] control   rx=     0pps       0kbps tx=   200pps     102kbps loss= 0.00% lost=0 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.502 INFO  [controller] mode=1 estop=no scheduler_missed=0
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.512 INFO  [controller] rx telemetry seq=16203
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.512 INFO  [controller]   q[0]=[0.160873 0.986975 -0.647737 -0.93858]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.512 INFO  [controller]   q[1]=[0.948538 -0.316662 -0.160408 -0.0804651]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.512 INFO  [controller]   q[2]=[-0.464298 -0.885679 0.855657 0.871075]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.512 INFO  [controller]   q[3]=[-0.800015 0.59998 -0.948687 0.811238]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.512 INFO  [controller]   q[4]=[0.720213 0.693753 0.374023 -0.1905]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.512 INFO  [controller]   lasers=[1.25961 1.32532 1.42177 1.53688 1.65565 1.76246 1.84363 1.8895 1.89597 1.86519 1.80517 1.72855 1.65057 1.58672 1.55022]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.513 INFO  [controller]   state=[-0.602237 -0.498603 -0.3843 -0.261109 -0.131004 0.00388431 0.141299 0.2789 0.414296 0.545095 0.66894 0.783554 0.886781 0.976626 1.05129 1.10922 1.14912 1.16997 1.1711 1.15215 1.1131 1.0543 0.976438 0.880541 0.767973 0.64041 0.499812 0.3484 0.188614 0.0230811 -0.145434 -0.31407 -0.479924 -0.640093 -0.791733 -0.932103 -1.05862 -1.1689 -1.2608 -1.33248 -1.38241 -1.40942 -1.41272 -1.39191 -1.34703 -1.27849 -1.18715 -1.07427 -0.941488 -0.790818]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.642 INFO  [controller] rx debug: t=81.165 mode=1 estop=0 axes=[0.00 0.00 0.00 0.00]
+Nov 09 16:49:25 gracekite-Laptop oal_controller[29759]: 16:49:25.847 INFO  [controller] rx debug: t=81.370 mode=1 estop=0 axes=[0.00 0.00 0.00 0.00]

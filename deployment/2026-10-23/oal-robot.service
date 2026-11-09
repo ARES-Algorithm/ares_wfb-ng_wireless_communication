@@ -1,0 +1,9 @@
+[Unit]
+Description=Omni Arm Link robot telemetry and control receiver
+After=network.target
+[Service]
+ExecStart=/home/ares/omni-arm-link/build/oal_robot --config /home/ares/omni-arm-link/config/link.conf --no-measure-latency --print-rate 1
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=default.target

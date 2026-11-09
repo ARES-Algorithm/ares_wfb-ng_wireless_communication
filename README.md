@@ -101,6 +101,22 @@ ctest --test-dir build --output-on-failure
 
 ---
 
+## 配置与回归检查
+
+程序统一按“内置默认值 → 配置文件 → 命令行”加载选项；日志设置支持
+`[common]` 的 `log_level`、`color`，命令行优先。三个 `run_*.sh` 入口共用
+`run_app.sh`，保留原有 `OAL_CONFIG` 和各角色的 `OAL_*_BIN` 覆盖方式。
+
+`ctest` 包含协议自测与核心回归检查，覆盖固定字节格式、截断/损坏帧、
+配置优先级、UDP 空帧和最大帧。`OAL_BUILD_TOOLS=OFF` 时仍可运行核心检查；
+生产构建可用 `-DBUILD_TESTING=OFF` 排除测试程序。
+
+WFB 总应用帧上限为 3993 字节，扣除 28 字节帧头后负载上限为 3965 字节；
+`oal_linktest --size` 超出 1–3965 时直接报错，不再静默截断。
+调试文本长度字段为一个字节，因此最多 255 字节。
+
+---
+
 ## 无电台快速开始（仿真）
 
 仿真工具使用普通 UDP，并复现完全相同的应用层协议，因此整条链路可在一台主机上
@@ -155,6 +171,12 @@ ctest --test-dir build --output-on-failure
 ```bash
 sudo scripts/install_wfbng.sh 8812eu
 ```
+
+**保留 IPv6：** 安装和运行不得关闭任何设备的 IPv6。上游 RTL8812EU 的
+`dkms-install.sh` 会写入全局禁用 IPv6 的 sysctl 配置，因此本项目安装脚本绕过
+该辅助脚本，直接执行 DKMS 的 add/build/install。不要手工运行上游辅助脚本。
+可用 `sysctl net.ipv6.conf.all.disable_ipv6 net.ipv6.conf.default.disable_ipv6
+net.ipv6.conf.lo.disable_ipv6` 检查，三项均应为 `0`。
 
 ### 2. 生成密钥对
 
@@ -580,6 +602,38 @@ SSH 取回 `<remote-dir>/<role>.report` 及 FEC 采样文件，调用
 oal_sim robot --dest HOST:PORT --rate 200 --loss 0.05 --jitter-ms 5
 oal_sim controller --dest HOST:PORT --rate 200 --estop
 ```
+
+---
+
+## 持续互传与按需抓取（实机日常测试）
+
+两端业务独立持续发送：遥控器控制 200 Hz（64 B/帧），机器人遥测 200 Hz
+（368 B/帧），机器人调试约 5 Hz。正常收发不依赖测试命令，不采用请求/应答驱动。
+实机用户服务只记录告警，不持续打印逐帧内容；启动测试时才抓取统计并写入报告。
+
+在遥控器执行（机器人已部署同版本脚本，SSH 可登录）：
+
+```bash
+python3 scripts/capture_link.py --robot arespi@10.166.241.115 --duration 30
+```
+
+此命令并行读取两端 WFB-NG 的本地统计 API，将原始统计保存为
+`captures/<时间>/controller.jsonl`、`robot.jsonl`，生成 `report.txt` 和
+`summary.json`。通信进程与网卡持续运行，抓取不会发送额外无线探测包，也不会
+绑定/抢占应用的 UDP 接收端口。无需 sudo，不更改 IPv6 或无线参数。
+可用 `--dir 新目录` 指定输出位置；`--robot-repo` 指定机器人仓库路径。
+
+报告分别给出实际 TX/RX 帧率、含 28 B OAL 帧头的数据速率、接收有效负载速率、
+FEC 恢复数及 FEC 后损失率。控制的标称帧速率为 102.4 kbit/s、有效负载 57.6
+kbit/s；遥测分别为 588.8、544 kbit/s，均不含 UDP/IP、加密与 FEC 开销。
+速率是当前业务吞吐；报告不推算无线极限带宽，也不从统计计数推算延迟。
+FEC 后损失率使用接收端同一窗口的 `lost/(out+lost)`，不是异步两端计数相减，
+也不代表应用层 CRC 验证后的交付率。两端窗口长度会随报告列出。
+
+旧 `link_test.sh`、`link_test_2host.sh` 用于主动压力测试，会额外发送
+`test_up/test_down` ping/pong。仅在需要额外负载或 RTT 时显式运行，日常测当前
+业务速率应使用上面的被动抓取命令。可复用已认证 SSH 连接：
+`--ssh-option ControlPath=/tmp/oal-arespi-20261109.sock`。
 
 ---
 

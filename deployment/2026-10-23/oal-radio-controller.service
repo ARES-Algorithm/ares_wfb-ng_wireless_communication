@@ -1,0 +1,10 @@
+[Unit]
+Description=Omni Arm Link controller WFB radio
+After=NetworkManager.service
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/wfb-server --profiles controller --wlans wlx140a022213ac
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=multi-user.target

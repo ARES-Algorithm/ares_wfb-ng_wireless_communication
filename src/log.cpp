@@ -1,4 +1,5 @@
 #include "oal/log.hpp"
+#include "oal/config.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -44,6 +45,23 @@ void timestamp(char* buffer, std::size_t size) {
 }
 
 }  // namespace
+
+void configure_logging(const Config& config) {
+    const OptionResolver options(config, "common");
+    const std::string level = options.string("log_level", "info");
+    LogLevel selected = LogLevel::Info;
+    if (level == "trace") {
+        selected = LogLevel::Trace;
+    } else if (level == "debug") {
+        selected = LogLevel::Debug;
+    } else if (level == "warn") {
+        selected = LogLevel::Warn;
+    } else if (level == "error") {
+        selected = LogLevel::Error;
+    }
+    set_log_level(selected);
+    set_log_use_color(options.boolean("color", true));
+}
 
 void set_log_level(LogLevel level) { g_level.store(static_cast<int>(level)); }
 

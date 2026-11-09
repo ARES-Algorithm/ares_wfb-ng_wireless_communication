@@ -52,7 +52,7 @@ void print_usage() {
         "  --help                   show this help\n");
 }
 
-bool load_options(const Config& cfg, MonitorOptions& opt) {
+void load_options(const Config& cfg, MonitorOptions& opt) {
     const OptionResolver r(cfg, "monitor");
     opt.bind = r.string("bind", opt.bind);
     opt.telemetry_port = static_cast<std::uint16_t>(r.integer("telemetry_port", opt.telemetry_port));
@@ -63,7 +63,6 @@ bool load_options(const Config& cfg, MonitorOptions& opt) {
     opt.measure_latency = r.boolean("measure_latency", opt.measure_latency);
     opt.frame_log = r.boolean("frame_log", opt.frame_log);
     opt.log_file = r.string("log_file", opt.log_file);
-    return true;
 }
 
 std::string default_log_path() {
@@ -94,35 +93,17 @@ void write_log_line(std::FILE* file, const Frame& frame, const char* direction,
 
 int main(int argc, char** argv) {
     Config cfg;
-    cfg.apply_command_line(argc, argv);
-    if (cfg.get_bool("help", false)) {
+    std::string config_error;
+    if (!cfg.load_arguments(argc, argv, &config_error)) {
+        std::fprintf(stderr, "%s\n", config_error.c_str());
+        return 2;
+    }
+    if (cfg.help_requested()) {
         print_usage();
         return 0;
     }
 
-    const std::string config_path = cfg.get_string("config", "");
-    if (!config_path.empty()) {
-        std::string error;
-        if (!cfg.load_file(config_path, &error)) {
-            std::fprintf(stderr, "%s\n", error.c_str());
-            return 2;
-        }
-        cfg.apply_command_line(argc, argv);
-    }
-
-    const std::string level = cfg.get_string("log_level", cfg.get_string("common.log_level", "info"));
-    if (level == "trace") {
-        set_log_level(LogLevel::Trace);
-    } else if (level == "debug") {
-        set_log_level(LogLevel::Debug);
-    } else if (level == "warn") {
-        set_log_level(LogLevel::Warn);
-    } else if (level == "error") {
-        set_log_level(LogLevel::Error);
-    } else {
-        set_log_level(LogLevel::Info);
-    }
-    set_log_use_color(cfg.get_bool("color", true));
+    configure_logging(cfg);
 
     MonitorOptions options;
     load_options(cfg, options);

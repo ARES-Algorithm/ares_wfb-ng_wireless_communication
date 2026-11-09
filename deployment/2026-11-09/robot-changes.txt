@@ -1,0 +1,81 @@
+diff --git a/scripts/install_wfbng.sh b/scripts/install_wfbng.sh
+index 98380e9..ec88ada 100755
+--- a/scripts/install_wfbng.sh
++++ b/scripts/install_wfbng.sh
+@@ -25,7 +25,7 @@ apt-get install -y \
+     dkms git build-essential libpcap-dev libsodium-dev libevent-dev \
+     python3 python3-pip python3-all python3-all-dev python3-venv \
+     python3-pyroute2 python3-twisted python3-serial python3-msgpack \
+-    python3-setuptools libgstrtspserver-1.0-dev iw socat
++    python3-setuptools python3-jinja2 python3-yaml libgstrtspserver-1.0-dev iw socat
+
+ echo "==> building patched WiFi driver (${CHIPSET})"
+ cd "${DRIVER_DIR}"
+@@ -40,7 +40,23 @@ else
+         git clone -b v5.15.0.1 https://github.com/svpcom/rtl8812eu.git
+     fi
+     cd rtl8812eu
+-    ./dkms-install.sh
++    # DKMS reports the kernel arch as aarch64, but the kernel tree uses arm64.
++    if [[ "$(uname -m)" == "aarch64" ]]; then
++        sed -i 's|KSRC=/lib/modules/${kernelver}/build"|KSRC=/lib/modules/${kernelver}/build ARCH=arm64"|' dkms.conf
++    fi
++    # Do not invoke upstream dkms-install.sh: it disables IPv6 globally.
++    # Let DKMS read the package identity directly from dkms.conf instead.
++    package_name="$(sed -n 's/^PACKAGE_NAME="\([^"]*\)"/\1/p' dkms.conf)"
++    package_version="$(sed -n 's/^PACKAGE_VERSION="\([^"]*\)"/\1/p' dkms.conf)"
++    [[ -n "${package_name}" && -n "${package_version}" ]] || {
++        echo "error: cannot read DKMS package identity" >&2
++        exit 1
++    }
++    if ! dkms status -m "${package_name}" -v "${package_version}" | grep -q .; then
++        dkms add "${PWD}"
++    fi
++    dkms build -m "${package_name}" -v "${package_version}"
++    dkms install -m "${package_name}" -v "${package_version}"
+ fi
+
+ echo "==> installing wfb-ng from source"
+@@ -49,8 +65,22 @@ if [[ ! -d /opt/wfb-ng ]]; then
+ fi
+ cd /opt/wfb-ng
+ git pull --ff-only || true
+-make -j"$(nproc)"
+-make install
++# Build only the runtime binaries; the default target also builds the test
++# suite, which needs catch2 and is not installed by this script.
++make -j"$(nproc)" all_bin wfb_rtsp
++
++echo "==> installing wfb-ng binaries and python package"
++# wfb-ng has no 'make install' target; setup.py installs wfb_keygen/wfb_rx/
++# wfb_tx into /usr/bin and wfb-server/wfb-cli into /usr/local/bin.
++VERSION="$(make -s version | sed -n 's/^VERSION=//p')" \
++COMMIT="$(git rev-parse HEAD)" \
++    python3 setup.py install
++
++hash -r
++if ! command -v wfb_keygen >/dev/null 2>&1; then
++    echo "error: wfb_keygen still not in PATH after install" >&2
++    exit 1
++fi
+
+ echo "==> done"
+ echo "Verify the driver with: ethtool -i <wlan>"
+69:net.ipv6.conf.all.disable_ipv6 = 0
+70:  net.ipv6.conf.default.disable_ipv6 = 0
+71:  net.ipv6.conf.lo.disable_ipv6 = 0
+72:net.ipv6.conf.all.disable_ipv6 = 0
+73:  net.ipv6.conf.default.disable_ipv6 = 0
+74:  net.ipv6.conf.lo.disable_ipv6 = 0
+75:net.ipv6.conf.all.disable_ipv6 = 0
+76:  net.ipv6.conf.default.disable_ipv6 = 0
+77:  net.ipv6.conf.lo.disable_ipv6 = 0
+78:net.ipv6.conf.all.disable_ipv6 = 0
+79:  net.ipv6.conf.default.disable_ipv6 = 0
+80:  net.ipv6.conf.lo.disable_ipv6 = 0
+81:net.ipv6.conf.all.disable_ipv6 = 0
+82:  net.ipv6.conf.default.disable_ipv6 = 0
+83:  net.ipv6.conf.lo.disable_ipv6 = 0
+enabled
+enabled
+Linger=yes

@@ -160,35 +160,17 @@ void handle_command(int command, std::uint16_t& buttons, std::uint8_t& mode, boo
 
 int main(int argc, char** argv) {
     Config cfg;
-    cfg.apply_command_line(argc, argv);
-    if (cfg.get_bool("help", false)) {
+    std::string config_error;
+    if (!cfg.load_arguments(argc, argv, &config_error)) {
+        std::fprintf(stderr, "%s\n", config_error.c_str());
+        return 2;
+    }
+    if (cfg.help_requested()) {
         print_usage();
         return 0;
     }
 
-    const std::string config_path = cfg.get_string("config", "");
-    if (!config_path.empty()) {
-        std::string error;
-        if (!cfg.load_file(config_path, &error)) {
-            std::fprintf(stderr, "%s\n", error.c_str());
-            return 2;
-        }
-        cfg.apply_command_line(argc, argv);
-    }
-
-    const std::string level = cfg.get_string("log_level", cfg.get_string("common.log_level", "info"));
-    if (level == "trace") {
-        set_log_level(LogLevel::Trace);
-    } else if (level == "debug") {
-        set_log_level(LogLevel::Debug);
-    } else if (level == "warn") {
-        set_log_level(LogLevel::Warn);
-    } else if (level == "error") {
-        set_log_level(LogLevel::Error);
-    } else {
-        set_log_level(LogLevel::Info);
-    }
-    set_log_use_color(cfg.get_bool("color", true));
+    configure_logging(cfg);
 
     ControllerOptions options;
     if (!load_options(cfg, options)) {

@@ -1,0 +1,16 @@
+timestamp=1792734304.948
+id=test_down rx
+fec_k=2
+fec_n=4
+all=2946
+all_bytes=1164460
+data=2939
+uniq=2939
+fec_rec=202
+lost=9
+bad=0
+dec_err=0
+out=1585
+out_bytes=583280
+frags=3184
+frags_lost=248

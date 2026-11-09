@@ -38,7 +38,6 @@ public:
 
     bool add_target(const Endpoint& endpoint, std::string* error) {
         Target target;
-        target.endpoint = endpoint;
         if (!target.socket.connect(endpoint.host, endpoint.port, error)) {
             return false;
         }
@@ -49,7 +48,7 @@ public:
 
     void deliver(const std::vector<std::uint8_t>& data) {
         for (auto& target : targets_) {
-            if (impairments_.loss > 0.0 && chance(impairments_.loss)) {
+            if (chance(impairments_.loss)) {
                 ++dropped_;
                 continue;
             }
@@ -79,7 +78,6 @@ public:
 
 private:
     struct Target {
-        Endpoint endpoint;
         UdpSocket socket;
     };
 
@@ -103,7 +101,7 @@ private:
             std::uniform_real_distribution<double> dist(0.0, impairments_.jitter_ms);
             delay += dist(rng_);
         }
-        if (impairments_.reorder > 0.0 && chance(impairments_.reorder)) {
+        if (chance(impairments_.reorder)) {
             delay += 20.0;
         }
         const std::uint64_t due = now_ns() + static_cast<std::uint64_t>(delay * 1e6);
@@ -157,16 +155,14 @@ void fill_telemetry(TelemetryPayload& telemetry, double seconds) {
 }
 
 bool parse_destinations(const Config& cfg, std::vector<Endpoint>& out) {
-    for (const auto& [key, value] : cfg.entries()) {
-        if (key == "dest") {
-            Endpoint endpoint;
-            if (!parse_endpoint(value, endpoint)) {
-                OAL_ERROR(kTag) << "invalid --dest: " << value;
-                return false;
-            }
-            out.push_back(endpoint);
-        }
+    const std::string value = cfg.get_string("dest", "");
+    if (value.empty()) return true;
+    Endpoint endpoint;
+    if (!parse_endpoint(value, endpoint)) {
+        OAL_ERROR(kTag) << "invalid --dest: " << value;
+        return false;
     }
+    out.push_back(endpoint);
     return true;
 }
 
@@ -178,22 +174,6 @@ Impairments load_impairments(const Config& cfg) {
     imp.jitter_ms = cfg.get_double("jitter_ms", 0.0);
     imp.delay_ms = cfg.get_double("delay_ms", 0.0);
     return imp;
-}
-
-void configure_logging(const Config& cfg) {
-    const std::string level = cfg.get_string("log_level", "info");
-    if (level == "trace") {
-        set_log_level(LogLevel::Trace);
-    } else if (level == "debug") {
-        set_log_level(LogLevel::Debug);
-    } else if (level == "warn") {
-        set_log_level(LogLevel::Warn);
-    } else if (level == "error") {
-        set_log_level(LogLevel::Error);
-    } else {
-        set_log_level(LogLevel::Info);
-    }
-    set_log_use_color(cfg.get_bool("color", true));
 }
 
 int run_robot(const Config& cfg) {
@@ -362,9 +342,13 @@ int run_controller(const Config& cfg) {
 
 int main(int argc, char** argv) {
     Config cfg;
-    cfg.apply_command_line(argc, argv);
+    std::string config_error;
+    if (!cfg.load_arguments(argc, argv, &config_error)) {
+        std::fprintf(stderr, "%s\n", config_error.c_str());
+        return 2;
+    }
 
-    if (cfg.get_bool("help", false)) {
+    if (cfg.help_requested()) {
         print_usage();
         return 0;
     }
@@ -378,16 +362,6 @@ int main(int argc, char** argv) {
         OAL_ERROR(kTag) << "unknown mode: " << mode;
         print_usage();
         return 2;
-    }
-
-    const std::string config_path = cfg.get_string("config", "");
-    if (!config_path.empty()) {
-        std::string error;
-        if (!cfg.load_file(config_path, &error)) {
-            std::fprintf(stderr, "%s\n", error.c_str());
-            return 2;
-        }
-        cfg.apply_command_line(argc, argv);
     }
 
     configure_logging(cfg);

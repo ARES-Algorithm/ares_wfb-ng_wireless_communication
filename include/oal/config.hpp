@@ -9,6 +9,9 @@ namespace oal {
 
 class Config {
 public:
+    bool load_arguments(int argc, char** argv, std::string* error = nullptr);
+    bool help_requested() const;
+
     bool load_file(const std::string& path, std::string* error = nullptr);
 
     void apply_command_line(int argc, char** argv);
@@ -21,7 +24,6 @@ public:
     double get_double(const std::string& key, double fallback) const;
     bool get_bool(const std::string& key, bool fallback) const;
 
-    const std::map<std::string, std::string>& entries() const { return entries_; }
     const std::vector<std::string>& positional() const { return positional_; }
 
 private:

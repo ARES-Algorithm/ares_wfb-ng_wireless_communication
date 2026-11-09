@@ -102,11 +102,10 @@ bool load_options(Config& cfg, Options& opt) {
     opt.self_test = cfg.get_bool("self_test", opt.self_test);
     opt.rx_port = static_cast<std::uint16_t>(cfg.get_int("rx_port", opt.rx_port));
     opt.payload_size = static_cast<std::size_t>(cfg.get_int("size", 1));
-    if (opt.payload_size < 1) {
-        opt.payload_size = 1;
-    }
-    if (opt.payload_size > kWfbMaxPacketBytes) {
-        opt.payload_size = kWfbMaxPacketBytes;
+    if (opt.payload_size < 1 || opt.payload_size > kWfbMaxPacketBytes - kHeaderSize) {
+        OAL_ERROR(kTag) << "size must be between 1 and "
+                        << kWfbMaxPacketBytes - kHeaderSize << " bytes";
+        return false;
     }
 
     const std::string tx_endpoint = cfg.get_string("tx_endpoint", "");
@@ -250,20 +249,14 @@ int run_self_test() {
 
 int main(int argc, char** argv) {
     Config cfg;
-    cfg.apply_command_line(argc, argv);
-    if (cfg.get_bool("help", false)) {
+    std::string config_error;
+    if (!cfg.load_arguments(argc, argv, &config_error)) {
+        std::fprintf(stderr, "%s\n", config_error.c_str());
+        return 2;
+    }
+    if (cfg.help_requested()) {
         print_usage();
         return 0;
-    }
-
-    const std::string config_path = cfg.get_string("config", "");
-    if (!config_path.empty()) {
-        std::string error;
-        if (!cfg.load_file(config_path, &error)) {
-            std::fprintf(stderr, "%s\n", error.c_str());
-            return 2;
-        }
-        cfg.apply_command_line(argc, argv);
     }
 
     Options options;
@@ -275,17 +268,7 @@ int main(int argc, char** argv) {
         return run_self_test();
     }
 
-    const std::string level = cfg.get_string("log_level", "info");
-    if (level == "debug") {
-        set_log_level(LogLevel::Debug);
-    } else if (level == "trace") {
-        set_log_level(LogLevel::Trace);
-    } else if (level == "warn") {
-        set_log_level(LogLevel::Warn);
-    } else {
-        set_log_level(LogLevel::Info);
-    }
-    set_log_use_color(cfg.get_bool("color", true));
+    configure_logging(cfg);
 
     install_signal_handlers();
 
@@ -311,7 +294,6 @@ int main(int argc, char** argv) {
                    << options.rx_port << ", rate=" << options.rate << " Hz, size="
                    << options.payload_size;
 
-    StreamStats tx_stats("tx");
     StreamStats reply_window("reply");
     StreamStats reply_total("reply");
     StreamStats request_window("request");
@@ -362,13 +344,11 @@ int main(int argc, char** argv) {
             if (kind == kPing) {
                 request_window.on_rx(frame.header.seq, frame.size());
                 request_total.on_rx(frame.header.seq, frame.size());
-                std::vector<std::uint8_t> echo = pong;
                 if (options.random_payload) {
-                    fill_random(echo, kPong);
+                    fill_random(pong, kPong);
                 }
                 if (tx.send(options.tx_stream, kFlagNone, frame.header.seq,
-                            frame.header.timestamp_ns, echo)) {
-                    tx_stats.on_tx(echo.size() + kHeaderSize);
+                            frame.header.timestamp_ns, pong)) {
                     ++echoed_pongs;
                 }
             } else if (kind == kPong) {
@@ -389,7 +369,6 @@ int main(int argc, char** argv) {
                 fill_random(ping, kPing);
             }
             if (tx.send(options.tx_stream, kFlagNone, seq++, epoch_ns(), ping)) {
-                tx_stats.on_tx(ping.size() + kHeaderSize);
                 ++sent_pings;
             }
         }

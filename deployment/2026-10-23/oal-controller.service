@@ -1,0 +1,9 @@
+[Unit]
+Description=Omni Arm Link controller (neutral axes)
+After=network.target
+[Service]
+ExecStart=/home/gracekite/Documents/MyFiles/RC_Projects/AlgoWorkspace-27/omni-arm-link/build/oal_controller --config /home/gracekite/Documents/MyFiles/RC_Projects/AlgoWorkspace-27/omni-arm-link/config/link.conf --no-auto-motion --no-measure-latency --print-rate 1
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=default.target

@@ -15,6 +15,9 @@ enum class LogLevel : int {
     Off = 5,
 };
 
+class Config;
+void configure_logging(const Config& config);
+
 void set_log_level(LogLevel level);
 LogLevel log_level();
 bool set_log_file(const std::string& path);

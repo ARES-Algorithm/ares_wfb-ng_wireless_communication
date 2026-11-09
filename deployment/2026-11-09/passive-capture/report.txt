@@ -1,0 +1,17 @@
+OAL passive capture of existing continuous traffic
+
+Stream / direction       TX fps   RX fps   TX kbit/s  RX kbit/s  RX payload kbit/s  Loss %  FEC recovered
+control    c->r        200.00   198.66    102.401    101.712             57.213   0.672             61
+telemetry  r->c        200.00   199.93    588.801    588.589            543.805   0.034            106
+debug      r->c          4.93     4.93      3.143      3.144              2.039   0.000              4
+
+c=controller; r=robot; kbit/s uses 1000 bits/s.
+TX/RX kbit/s include the 28-byte OAL header, excluding UDP/IP/WFB/FEC overhead.
+RX payload excludes the OAL header; delivery is measured at WFB's local UDP output.
+Loss = receiver FEC lost / (receiver output + FEC lost), within its own window.
+TX/RX windows are independently sampled; raw count subtraction is not a loss measurement.
+control: TX window=29.000s, RX window=29.000s, TX drop/truncate=0/0, WFB injected=442.306 kbit/s (not full PHY airtime)
+telemetry: TX window=29.000s, RX window=29.000s, TX drop/truncate=0/0, WFB injected=951.106 kbit/s (not full PHY airtime)
+debug: TX window=29.000s, RX window=29.001s, TX drop/truncate=0/0, WFB injected=9.229 kbit/s (not full PHY airtime)
+Extra test streams: idle
+No probe traffic injected. No RTT/one-way latency inferred from these counters.

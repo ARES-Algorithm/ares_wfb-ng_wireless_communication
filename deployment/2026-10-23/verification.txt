@@ -1,0 +1,34 @@
+CONTROLLER
+active
+active
+net.ipv6.conf.all.disable_ipv6 = 0
+net.ipv6.conf.default.disable_ipv6 = 0
+net.ipv6.conf.lo.disable_ipv6 = 0
+lo               UNKNOWN        127.0.0.1/8 ::1/128
+wlp0s20f3        UP             10.20.64.255/17 fd28:a320:8d44:4b1d:b540:f6af:7617:9378/64 fd28:a320:8d44:4b1d:a1d1:9c02:8d80:9a32/64 fe80::a25:3a7e:dba:ac7a/64
+wlx140a022213ac  UP
+IPv6 per-interface flags
+/proc/sys/net/ipv6/conf/all/disable_ipv6=0
+/proc/sys/net/ipv6/conf/default/disable_ipv6=0
+/proc/sys/net/ipv6/conf/lo/disable_ipv6=0
+/proc/sys/net/ipv6/conf/wlp0s20f3/disable_ipv6=0
+/proc/sys/net/ipv6/conf/wlx140a022213ac/disable_ipv6=0
+ROBOT
+active
+active
+realtek-rtl88x2eu/5.15.0.1~20230815, 6.8.0-138-generic, x86_64: installed
+net.ipv6.conf.all.disable_ipv6 = 0
+net.ipv6.conf.default.disable_ipv6 = 0
+net.ipv6.conf.lo.disable_ipv6 = 0
+lo               UNKNOWN        127.0.0.1/8 ::1/128
+enp4s0           DOWN
+wlo1             UP             10.25.94.57/14 fe80::7bdc:fa34:9df1:b57f/64
+Meta             UNKNOWN        198.18.0.1/30 fe80::d4ef:bce8:bc1e:efbc/64
+wlx140a022213a5  UP
+/proc/sys/net/ipv6/conf/Meta/disable_ipv6=0
+/proc/sys/net/ipv6/conf/all/disable_ipv6=0
+/proc/sys/net/ipv6/conf/default/disable_ipv6=0
+/proc/sys/net/ipv6/conf/enp4s0/disable_ipv6=0
+/proc/sys/net/ipv6/conf/lo/disable_ipv6=0
+/proc/sys/net/ipv6/conf/wlo1/disable_ipv6=0
+/proc/sys/net/ipv6/conf/wlx140a022213a5/disable_ipv6=0

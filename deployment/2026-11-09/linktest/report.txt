@@ -1,0 +1,21 @@
+OAL bidirectional link test report
+==================================
+robot report:       /home/gracekite/Documents/MyFiles/RC_Projects/AlgoWorkspace-27/omni-arm-link/deployment/2026-11-09/linktest/robot.report
+controller report:  /home/gracekite/Documents/MyFiles/RC_Projects/AlgoWorkspace-27/omni-arm-link/deployment/2026-11-09/linktest/controller.report
+test:               200 Hz, 340 B payload
+duration:           robot 35.000 s, controller 30.000 s
+
+Direction                  TX       RX    Loss %     Lost    Dup  Reorder    RX pps
+controller->robot        5999     5951     0.800       48      0        0     170.0
+robot->controller        5951     5875     1.277      120      0        0     195.8
+
+Round-trip latency (controller->robot->controller):
+  samples=5875  min=4.909 ms  p50=10.006 ms  p95=15.031 ms  p99=15.170 ms  max=30.071 ms  jitter=1.630 ms
+
+FEC recovery (WFB-NG rx counters during test):
+Direction                K/N  Recovered     Lost Recovery %
+controller->robot        2/4        701       48      93.59
+robot->controller        2/4        735       73      90.97
+
+Scheduler missed:   robot=0 controller=0
+Result:             PASS (loss <= 5%, p99 <= 100 ms)

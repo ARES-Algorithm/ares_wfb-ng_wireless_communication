@@ -1,0 +1,33 @@
+2026-11-09T16:49:26+08:00
+arespi-desktop
+active
+active
+Interface wlx140a022213a5
+	ifindex 4
+	wdev 0x100000001
+	addr 14:0a:02:22:13:a5
+	type monitor
+	wiphy 1
+	channel 165 (5825 MHz), width: 20 MHz (no HT), center1: 5825 MHz
+	txpower 19.00 dBm
+/proc/sys/net/ipv6/conf/all/disable_ipv6=0
+/proc/sys/net/ipv6/conf/default/disable_ipv6=0
+/proc/sys/net/ipv6/conf/eth0/disable_ipv6=0
+/proc/sys/net/ipv6/conf/lo/disable_ipv6=0
+/proc/sys/net/ipv6/conf/wlan0/disable_ipv6=0
+/proc/sys/net/ipv6/conf/wlx140a022213a5/disable_ipv6=0
+Nov 09 16:49:22 arespi-desktop oal_robot[3908]: 16:49:22.732 INFO  [robot] telemetry rx=     0pps       0kbps tx=   200pps     589kbps loss= 0.00% lost=0 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:22 arespi-desktop oal_robot[3908]: 16:49:22.733 INFO  [robot] control   rx=   197pps     101kbps tx=     0pps       0kbps loss= 1.30% lost=162 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:22 arespi-desktop oal_robot[3908]: 16:49:22.733 INFO  [robot] safe_state=no scheduler_missed=3
+Nov 09 16:49:23 arespi-desktop oal_robot[3908]: 16:49:23.547 INFO  [robot] rx control seq=1203 mode=1 buttons=0 estop=0 axes=[0 0 0 0]
+Nov 09 16:49:23 arespi-desktop oal_robot[3908]: 16:49:23.733 INFO  [robot] telemetry rx=     0pps       0kbps tx=   200pps     589kbps loss= 0.00% lost=0 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:23 arespi-desktop oal_robot[3908]: 16:49:23.733 INFO  [robot] control   rx=   199pps     102kbps tx=     0pps       0kbps loss= 1.28% lost=162 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:23 arespi-desktop oal_robot[3908]: 16:49:23.733 INFO  [robot] safe_state=no scheduler_missed=3
+Nov 09 16:49:24 arespi-desktop oal_robot[3908]: 16:49:24.547 INFO  [robot] rx control seq=1403 mode=1 buttons=0 estop=0 axes=[0 0 0 0]
+Nov 09 16:49:24 arespi-desktop oal_robot[3908]: 16:49:24.737 INFO  [robot] telemetry rx=     0pps       0kbps tx=   200pps     589kbps loss= 0.00% lost=0 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:24 arespi-desktop oal_robot[3908]: 16:49:24.738 INFO  [robot] control   rx=   200pps     102kbps tx=     0pps       0kbps loss= 1.26% lost=162 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:24 arespi-desktop oal_robot[3908]: 16:49:24.738 INFO  [robot] safe_state=no scheduler_missed=3
+Nov 09 16:49:25 arespi-desktop oal_robot[3908]: 16:49:25.552 INFO  [robot] rx control seq=1604 mode=1 buttons=0 estop=0 axes=[0 0 0 0]
+Nov 09 16:49:25 arespi-desktop oal_robot[3908]: 16:49:25.737 INFO  [robot] telemetry rx=     0pps       0kbps tx=   200pps     589kbps loss= 0.00% lost=0 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:25 arespi-desktop oal_robot[3908]: 16:49:25.738 INFO  [robot] control   rx=   194pps      99kbps tx=     0pps       0kbps loss= 1.24% lost=162 dup=0 ro=0 p50=  0.00ms p95=  0.00ms p99=  0.00ms max=  0.00ms jit= 0.00ms
+Nov 09 16:49:25 arespi-desktop oal_robot[3908]: 16:49:25.738 INFO  [robot] safe_state=no scheduler_missed=3

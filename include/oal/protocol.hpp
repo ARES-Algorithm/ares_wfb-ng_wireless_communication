@@ -90,7 +90,7 @@ struct TelemetryPayload {
     std::array<float, kStateCount> state{};
 };
 
-constexpr std::size_t kDebugMaxBytes = 256;
+constexpr std::size_t kDebugMaxBytes = 255;
 constexpr std::size_t kDebugHeaderBytes = 2;
 
 struct DebugPayload {

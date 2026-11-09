@@ -12,6 +12,8 @@ namespace oal {
 
 class ByteWriter {
 public:
+    explicit ByteWriter(std::vector<std::uint8_t>& bytes) : bytes_(bytes) { bytes_.clear(); }
+
     void put_u8(std::uint8_t v) { bytes_.push_back(v); }
 
     void put_u16(std::uint16_t v) {
@@ -39,16 +41,13 @@ public:
 
     void put_bytes(const void* data, std::size_t length) {
         const auto* p = static_cast<const std::uint8_t*>(data);
-        bytes_.insert(bytes_.end(), p, p + length);
+        if (length != 0) {
+            bytes_.insert(bytes_.end(), p, p + length);
+        }
     }
 
-    std::size_t size() const { return bytes_.size(); }
-    const std::vector<std::uint8_t>& data() const { return bytes_; }
-    std::vector<std::uint8_t>& data() { return bytes_; }
-    void clear() { bytes_.clear(); }
-
 private:
-    std::vector<std::uint8_t> bytes_;
+    std::vector<std::uint8_t>& bytes_;
 };
 
 class ByteReader {
@@ -141,15 +140,17 @@ struct Frame {
 void encode_header(const FrameHeader& header, ByteWriter& out);
 bool decode_header(ByteReader& in, FrameHeader& header);
 
-bool encode_control(const ControlPayload& msg, std::vector<std::uint8_t>& out);
+void encode_control(const ControlPayload& msg, std::vector<std::uint8_t>& out);
 bool decode_control(const void* data, std::size_t length, ControlPayload& out);
 
-bool encode_telemetry(const TelemetryPayload& msg, std::vector<std::uint8_t>& out);
+void encode_telemetry(const TelemetryPayload& msg, std::vector<std::uint8_t>& out);
 bool decode_telemetry(const void* data, std::size_t length, TelemetryPayload& out);
 
-bool encode_debug(const DebugPayload& msg, std::vector<std::uint8_t>& out);
+void encode_debug(const DebugPayload& msg, std::vector<std::uint8_t>& out);
 bool decode_debug(const void* data, std::size_t length, DebugPayload& out);
 
+void encode_frame(FrameHeader& header, const void* payload, std::size_t length,
+                  std::vector<std::uint8_t>& out);
 void encode_frame(Frame& frame, std::vector<std::uint8_t>& out);
 bool decode_frame(const void* data, std::size_t length, Frame& out, std::string* error = nullptr);
 

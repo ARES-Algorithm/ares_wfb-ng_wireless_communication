@@ -25,7 +25,7 @@ apt-get install -y \
     dkms git build-essential libpcap-dev libsodium-dev libevent-dev \
     python3 python3-pip python3-all python3-all-dev python3-venv \
     python3-pyroute2 python3-twisted python3-serial python3-msgpack \
-    python3-setuptools libgstrtspserver-1.0-dev iw socat
+    python3-setuptools python3-jinja2 python3-yaml libgstrtspserver-1.0-dev iw socat
 
 echo "==> building patched WiFi driver (${CHIPSET})"
 cd "${DRIVER_DIR}"
@@ -44,7 +44,19 @@ else
     if [[ "$(uname -m)" == "aarch64" ]]; then
         sed -i 's|KSRC=/lib/modules/${kernelver}/build"|KSRC=/lib/modules/${kernelver}/build ARCH=arm64"|' dkms.conf
     fi
-    ./dkms-install.sh
+    # Do not invoke upstream dkms-install.sh: it disables IPv6 globally.
+    # Let DKMS read the package identity directly from dkms.conf instead.
+    package_name="$(sed -n 's/^PACKAGE_NAME="\([^"]*\)"/\1/p' dkms.conf)"
+    package_version="$(sed -n 's/^PACKAGE_VERSION="\([^"]*\)"/\1/p' dkms.conf)"
+    [[ -n "${package_name}" && -n "${package_version}" ]] || {
+        echo "error: cannot read DKMS package identity" >&2
+        exit 1
+    }
+    if ! dkms status -m "${package_name}" -v "${package_version}" | grep -q .; then
+        dkms add "${PWD}"
+    fi
+    dkms build -m "${package_name}" -v "${package_version}"
+    dkms install -m "${package_name}" -v "${package_version}"
 fi
 
 echo "==> installing wfb-ng from source"

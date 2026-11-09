@@ -81,5 +81,11 @@ install(DIRECTORY scripts/ DESTINATION share/omni-arm-link/scripts
 install(DIRECTORY systemd/ DESTINATION share/omni-arm-link/systemd
     FILES_MATCHING PATTERN "*.service")
 
-enable_testing()
-add_test(NAME protocol_roundtrip COMMAND oal_linktest --self-test)
+include(CTest)
+if(BUILD_TESTING)
+    if(OAL_BUILD_TOOLS)
+        add_test(NAME protocol_roundtrip COMMAND oal_linktest --self-test)
+    endif()
+    oal_add_app(oal_regression tests/regression.cpp)
+    add_test(NAME core_regression COMMAND oal_regression)
+endif()

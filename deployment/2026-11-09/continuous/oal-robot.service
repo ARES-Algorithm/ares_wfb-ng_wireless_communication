@@ -1,0 +1,10 @@
+[Unit]
+Description=Omni Arm Link continuous robot communication
+After=network.target
+[Service]
+WorkingDirectory=/home/arespi/omni-arm-link
+ExecStart=/home/arespi/omni-arm-link/build/oal_robot --config /home/arespi/omni-arm-link/config/link.conf --no-measure-latency --print-rate 0 --log-level warn
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=default.target

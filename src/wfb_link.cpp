@@ -48,7 +48,7 @@ bool WfbTxChannel::open(const std::string& host, std::uint16_t port, std::string
 bool WfbTxChannel::send(std::uint8_t stream, std::uint16_t flags, std::uint32_t seq,
                         std::uint64_t timestamp_ns, const void* payload, std::size_t length,
                         std::string* error) {
-    if (length > kWfbMaxPacketBytes) {
+    if (length > kWfbMaxPacketBytes - kHeaderSize) {
         last_error_ = "payload exceeds wfb packet size";
         if (error != nullptr) {
             *error = last_error_;
@@ -56,14 +56,12 @@ bool WfbTxChannel::send(std::uint8_t stream, std::uint16_t flags, std::uint32_t 
         return false;
     }
 
-    Frame frame;
-    frame.header.stream = stream;
-    frame.header.flags = flags;
-    frame.header.seq = seq;
-    frame.header.timestamp_ns = timestamp_ns;
-    frame.payload.assign(static_cast<const std::uint8_t*>(payload),
-                         static_cast<const std::uint8_t*>(payload) + length);
-    encode_frame(frame, scratch_);
+    FrameHeader header;
+    header.stream = stream;
+    header.flags = flags;
+    header.seq = seq;
+    header.timestamp_ns = timestamp_ns;
+    encode_frame(header, payload, length, scratch_);
 
     std::int64_t sent = socket_.send(scratch_.data(), scratch_.size());
     if (sent < 0) {

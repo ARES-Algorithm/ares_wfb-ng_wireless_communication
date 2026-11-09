@@ -1,7 +1,5 @@
 #include "oal/codec.hpp"
 
-#include <array>
-
 #include "oal/crc.hpp"
 
 namespace oal {
@@ -25,8 +23,8 @@ bool decode_header(ByteReader& in, FrameHeader& header) {
            in.get_u32(header.payload_crc);
 }
 
-bool encode_control(const ControlPayload& msg, std::vector<std::uint8_t>& out) {
-    ByteWriter w;
+void encode_control(const ControlPayload& msg, std::vector<std::uint8_t>& out) {
+    ByteWriter w(out);
     for (float a : msg.axes) {
         w.put_float(a);
     }
@@ -36,8 +34,6 @@ bool encode_control(const ControlPayload& msg, std::vector<std::uint8_t>& out) {
     for (float p : msg.params) {
         w.put_float(p);
     }
-    out = w.data();
-    return out.size() == kControlPayloadBytes;
 }
 
 bool decode_control(const void* data, std::size_t length, ControlPayload& out) {
@@ -46,23 +42,19 @@ bool decode_control(const void* data, std::size_t length, ControlPayload& out) {
     }
     ByteReader r(data, length);
     for (float& a : out.axes) {
-        if (!r.get_float(a)) {
-            return false;
-        }
+        r.get_float(a);
     }
-    if (!r.get_u16(out.buttons) || !r.get_u8(out.mode) || !r.get_u8(out.flags)) {
-        return false;
-    }
+    r.get_u16(out.buttons);
+    r.get_u8(out.mode);
+    r.get_u8(out.flags);
     for (float& p : out.params) {
-        if (!r.get_float(p)) {
-            return false;
-        }
+        r.get_float(p);
     }
-    return r.ok();
+    return true;
 }
 
-bool encode_telemetry(const TelemetryPayload& msg, std::vector<std::uint8_t>& out) {
-    ByteWriter w;
+void encode_telemetry(const TelemetryPayload& msg, std::vector<std::uint8_t>& out) {
+    ByteWriter w(out);
     for (const auto& q : msg.quaternions) {
         for (float v : q) {
             w.put_float(v);
@@ -74,8 +66,6 @@ bool encode_telemetry(const TelemetryPayload& msg, std::vector<std::uint8_t>& ou
     for (float v : msg.state) {
         w.put_float(v);
     }
-    out = w.data();
-    return out.size() == kTelemetryPayloadBytes;
 }
 
 bool decode_telemetry(const void* data, std::size_t length, TelemetryPayload& out) {
@@ -85,32 +75,24 @@ bool decode_telemetry(const void* data, std::size_t length, TelemetryPayload& ou
     ByteReader r(data, length);
     for (auto& q : out.quaternions) {
         for (float& v : q) {
-            if (!r.get_float(v)) {
-                return false;
-            }
+            r.get_float(v);
         }
     }
     for (float& v : out.lasers) {
-        if (!r.get_float(v)) {
-            return false;
-        }
+        r.get_float(v);
     }
     for (float& v : out.state) {
-        if (!r.get_float(v)) {
-            return false;
-        }
+        r.get_float(v);
     }
-    return r.ok();
+    return true;
 }
 
-bool encode_debug(const DebugPayload& msg, std::vector<std::uint8_t>& out) {
-    const std::size_t length = msg.length < kDebugMaxBytes ? msg.length : kDebugMaxBytes;
-    ByteWriter w;
+void encode_debug(const DebugPayload& msg, std::vector<std::uint8_t>& out) {
+    const std::size_t length = msg.length;
+    ByteWriter w(out);
     w.put_u8(static_cast<std::uint8_t>(msg.level));
     w.put_u8(static_cast<std::uint8_t>(length));
     w.put_bytes(msg.text.data(), length);
-    out = w.data();
-    return true;
 }
 
 bool decode_debug(const void* data, std::size_t length, DebugPayload& out) {
@@ -123,7 +105,7 @@ bool decode_debug(const void* data, std::size_t length, DebugPayload& out) {
     if (!r.get_u8(level) || !r.get_u8(text_len)) {
         return false;
     }
-    if (static_cast<std::size_t>(text_len) > kDebugMaxBytes || r.remaining() < text_len) {
+    if (r.remaining() < text_len) {
         return false;
     }
     out.level = static_cast<DebugLevel>(level);
@@ -132,25 +114,21 @@ bool decode_debug(const void* data, std::size_t length, DebugPayload& out) {
     return r.get_bytes(out.text.data(), text_len);
 }
 
-void encode_frame(Frame& frame, std::vector<std::uint8_t>& out) {
-    frame.header.magic = kMagic;
-    frame.header.version = kProtocolVersion;
-    frame.header.payload_len = static_cast<std::uint16_t>(frame.payload.size());
-    frame.header.payload_crc =
-        frame.payload.empty() ? 0U : crc32(frame.payload.data(), frame.payload.size());
+void encode_frame(FrameHeader& header, const void* payload, std::size_t length,
+                  std::vector<std::uint8_t>& out) {
+    header.magic = kMagic;
+    header.version = kProtocolVersion;
+    header.payload_len = static_cast<std::uint16_t>(length);
+    header.payload_crc = length == 0 ? 0U : crc32(payload, length);
 
-    ByteWriter w;
-    w.put_u32(frame.header.magic);
-    w.put_u8(frame.header.version);
-    w.put_u8(frame.header.stream);
-    w.put_u16(frame.header.flags);
-    w.put_u32(frame.header.seq);
-    w.put_u64(frame.header.timestamp_ns);
-    w.put_u16(frame.header.payload_len);
-    w.put_u16(frame.header.reserved);
-    w.put_u32(frame.header.payload_crc);
-    w.put_bytes(frame.payload.data(), frame.payload.size());
-    out = w.data();
+    out.reserve(kHeaderSize + length);
+    ByteWriter w(out);
+    encode_header(header, w);
+    w.put_bytes(payload, length);
+}
+
+void encode_frame(Frame& frame, std::vector<std::uint8_t>& out) {
+    encode_frame(frame.header, frame.payload.data(), frame.payload.size(), out);
 }
 
 bool decode_frame(const void* data, std::size_t length, Frame& out, std::string* error) {

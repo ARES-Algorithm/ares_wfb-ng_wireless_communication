@@ -1,8 +1,8 @@
 #include "oal/config.hpp"
 
-#include <cstdlib>
+#include <algorithm>
+#include <cctype>
 #include <fstream>
-#include <sstream>
 
 namespace oal {
 
@@ -65,6 +65,27 @@ bool Config::load_file(const std::string& path, std::string* error) {
     return true;
 }
 
+bool Config::load_arguments(int argc, char** argv, std::string* error) {
+    Config cli;
+    cli.apply_command_line(argc, argv);
+    *this = Config{};
+    const std::string path = cli.get_string("config", "");
+    if (!cli.help_requested() && !path.empty() && !load_file(path, error)) {
+        return false;
+    }
+    for (const auto& [key, value] : cli.entries_) {
+        set(key, value);
+    }
+    positional_ = std::move(cli.positional_);
+    return true;
+}
+
+bool Config::help_requested() const {
+    return get_bool("help", false) ||
+           std::find(positional_.begin(), positional_.end(), "help") != positional_.end() ||
+           std::find(positional_.begin(), positional_.end(), "-h") != positional_.end();
+}
+
 void Config::apply_command_line(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -94,7 +115,9 @@ void Config::apply_command_line(int argc, char** argv) {
             set(key, value);
             continue;
         }
-        if (i + 1 < argc && argv[i + 1][0] != '-') {
+        if (i + 1 < argc &&
+            (argv[i + 1][0] != '-' ||
+             std::isdigit(static_cast<unsigned char>(argv[i + 1][1])) || argv[i + 1][1] == '.')) {
             set(key, argv[++i]);
             continue;
         }
@@ -144,14 +167,7 @@ bool Config::get_bool(const std::string& key, bool fallback) const {
 }
 
 std::string OptionResolver::key(const std::string& name) const {
-    if (config_.has(name)) {
-        return name;
-    }
-    const std::string prefixed = prefix_ + "." + name;
-    if (config_.has(prefixed)) {
-        return prefixed;
-    }
-    return name;
+    return config_.has(name) ? name : prefix_ + "." + name;
 }
 
 bool OptionResolver::has(const std::string& name) const {
