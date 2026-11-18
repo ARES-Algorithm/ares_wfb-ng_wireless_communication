@@ -1,59 +1,105 @@
 # ares_wfb-ng_wireless_communication
 
-基于 WFB-NG 的通用双向 UDP 无线传输部署工程。应用将数据报发送到本地 UDP 端口，
-对端从指定本地 UDP 地址接收。底层将应用负载视为不透明字节，不附加或解析业务协议。
+基于 WFB-NG 的双向 UDP 无线传输工程，提供驱动安装、密钥生成、无线配置与开机自启。
+应用把 UDP 数据报交给本机 WFB-NG，对端 WFB-NG 将负载投递给对端应用。
+应用负责定义消息格式，WFB-NG 负责无线封装、加密和 FEC。
 
-本项目不再构建原 OAL1 C++ 应用，也不产生合成业务数据；实际无线收发由安装的 WFB-NG 完成。
-原作者及贡献者保留在 Git 历史中，迁移前说明与部署记录位于 docs/history/。
+项目贡献者及代码来源可通过 Git 提交历史追溯。
 
-## 接口
+## 安装
 
-| 方向 | Stream ID | 发送应用的目标地址 | 接收应用绑定地址 |
-|---|---|---|---|
-| robot → controller | 0x03 | robot 127.0.0.1:5642 | controller 127.0.0.2:5642 |
-| controller → robot | 0x81 | controller 127.0.0.1:5641 | robot 127.0.0.2:5641 |
-
-robot/controller 仅表示链路两端的配置角色，不限制硬件和上层软件。
-双方选择匹配的无线参数、流 ID、link_domain 和密钥。详见 [UDP 接口](docs/udp-interface.md)。
-
-## 安装和部署
-
-Ubuntu 22.04 / 24.04 克隆后从仓库根目录运行：
+在两台设备上分别克隆本项目，从仓库根目录执行：
 
 ```bash
 ./scripts/setup.sh
 ```
 
-向导引导完成 DKMS 驱动安装、WFB-NG 安装、密钥种子输入、角色/网卡选择，
-以及频点、区域、功率、带宽、FEC 配置，最后部署无线服务并设置开机自启。
-再次运行同一命令可选择保留或重新生成密钥、修改配置；所有提示都有默认值。
-同一链路两端输入相同非空种子；种子留空则随机生成，需分发同一套密钥。
+一端选择 `robot`，另一端选择 `controller`。这两个名称表示链路角色，可用于不同硬件和应用框架。
+向导提供芯片、网卡、密钥种子、频点、区域、功率、带宽与 FEC 设置，并部署无线服务。
+两端输入相同的非空种子，可以得到匹配的一套密钥；随机生成时，将同一套密钥分发到另一端。
+
+已有配置时，向导显示当前参数作为默认值。修改参数或生成密钥时，再次执行同一命令。
 
 ```bash
-./scripts/setup.sh --dry-run  # 只交互预览，不安装或修改系统
+./scripts/setup.sh --dry-run  # 交互预览
 ```
 
-无已有配置时默认 EU、robot、信道165、区域CN、驱动默认功率、20MHz、FEC 2/4；重跑沿用已安装配置。
-细节、默认值、系统路径、Secure Boot 与内核兼容限制见 [安装向导说明](docs/setup.md)。
-底层脚本仍可单独调用，向导是推荐入口。无线服务直接使用 /usr/local/bin/wfb-server，不再依赖仓库位置。
+目标系统为 Ubuntu 22.04 / 24.04。完整默认值、安装条件及配置路径见 [安装说明](docs/setup.md)。
 
-## 服务与迁移
+## 上层应用怎么收发
+
+**所有下表地址都是运行该应用的设备自己的回环地址。** 应用向本机 WFB-NG 发送，
+由无线链路将数据传到另一台设备。
+
+| 你的应用运行在哪台设备 | 发送：`sendto()` 的目标地址 | 接收：`bind()` 的本机地址 | 收到谁的数据 |
+|---|---|---|---|
+| 配置为 `robot` 的设备 | `127.0.0.1:5642` | `127.0.0.2:5641` | controller 端应用 |
+| 配置为 `controller` 的设备 | `127.0.0.1:5641` | `127.0.0.2:5642` | robot 端应用 |
+
+例如，robot 应用发送 `b'hello'`：
+
+```text
+robot 设备                                      controller 设备
+应用 sendto(127.0.0.1:5642)
+          ↓
+      本机 WFB-NG ────────── 无线 ──────────→ 本机 WFB-NG
+                                                   ↓
+                                  应用 bind(127.0.0.2:5642) 后 recvfrom()
+```
+
+在 **controller 设备**启动接收应用：
+
+```python
+import socket
+
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+    sock.bind(('127.0.0.2', 5642))
+    while True:
+        payload, _ = sock.recvfrom(65535)
+        print(payload)
+```
+
+在 **robot 设备**发送数据：
+
+```python
+import socket
+
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+    sock.sendto(b'hello', ('127.0.0.1', 5642))
+```
+
+controller 向 robot 发送时，目标使用本机 `127.0.0.1:5641`，robot 接收端绑定本机 `127.0.0.2:5641`。
+
+`127.0.0.1` 和 `127.0.0.2` 都是 Linux 回环地址，通常可直接使用。WFB-NG 根据配置在两者之间完成本地数据交接。
+完整双向示例、端口修改方法与传输约定见 [UDP 接口](docs/udp-interface.md)。
+
+## 服务管理
+
+robot 设备：
 
 ```bash
 systemctl status oal-radio-robot.service
 journalctl -u oal-radio-robot.service -f
-# controller 端替换服务名中的 robot。
 ```
 
-从旧版本迁移时，在原应用所属账户中停止并禁用旧 oal-robot/oal-controller/oal-monitor 用户服务；
-如曾以系统服务安装旧应用，也应停止并禁用对应系统服务。部署前确认没有其他无线服务占用同一网卡。
-旧应用二进制即使仍在磁盘上，本工程也不会启动它们。
+controller 设备：
 
-旧 5601–5632 的控制、遥测、调试和测试流已经移除。历史配置与报告不代表当前接口。
-部署备份目录由脚本输出，回退时恢复对应配置、密钥和服务单元，再重载并重启服务。
+```bash
+systemctl status oal-radio-controller.service
+journalctl -u oal-radio-controller.service -f
+```
 
-## 范围
+无线服务通过 `/usr/local/bin/wfb-server` 启动。配置、密钥和服务单元的备份路径在部署时输出。
+恢复备份后，执行 `sudo systemctl daemon-reload` 并重启对应服务。
 
-只有 config/、scripts/、systemd/ 和文档需要部署，无须 CMake 编译。
-不提供消息编解码、业务限频、分片、可靠重传或按序交付。消息格式及兼容性由两端应用约定。
-原压力测试、仿真和报告工具已移除。实际验证范围见 [精简验证记录](docs/verification.md)。
+## 项目结构
+
+```text
+config/       双端无线配置模板
+scripts/      交互入口、向导、依赖安装与统一部署
+systemd/      无线服务模板
+docs/         安装、UDP 接口和验证范围
+```
+
+数据报边界与负载字节是应用接口的一部分；可靠重传、排序、去重和大消息分片由上层应用负责。
+当前验证范围见 [验证说明](docs/verification.md)。
