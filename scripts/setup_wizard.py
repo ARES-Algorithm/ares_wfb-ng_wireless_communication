@@ -64,7 +64,7 @@ def read_secret(label):
         try:
             return getpass.getpass(label)
         except getpass.GetPassWarning:
-            raise ValueError('当前终端无法隐藏输入；请在交互式终端运行 ./setup.sh') from None
+            raise ValueError('当前终端无法隐藏输入；请在交互式终端运行 ./scripts/setup.sh') from None
 
 
 def channel(value):
@@ -183,13 +183,31 @@ def write_state(settings):
             os.unlink(name)
 
 
+def generate_keys(directory, seed):
+    directory.mkdir(mode=0o700)
+    command = ['wfb_keygen']
+    if seed:
+        command.append(seed)
+    # Upstream accepts the seed via argv only; run() deliberately never logs it.
+    old_umask = os.umask(0o077)
+    try:
+        run(command, cwd=str(directory))
+    finally:
+        os.umask(old_umask)
+    for name in ('drone.key', 'gs.key'):
+        path = directory / name
+        if path.stat().st_size != 64:
+            raise ValueError('生成的密钥大小不正确，未安装配置')
+        path.chmod(0o600)
+
+
 def validate_interface(name, chipset):
     if not re.fullmatch('[A-Za-z0-9_.:-]+', name) or name not in interfaces():
-        raise ValueError('无线接口不存在，请检查网卡，必要时重新插拔后再次运行 setup.sh')
+        raise ValueError('无线接口不存在，请检查网卡，必要时重新插拔后再次运行 scripts/setup.sh')
     module = Path('/sys/class/net') / name / 'device/driver/module'
     expected = '8812eu' if chipset == '8812eu' else '88xxau_wfb'
     if not module.exists() or module.resolve().name.lower() != expected:
-        raise ValueError('该接口未使用已安装的 WFB 驱动；重新插拔网卡或重启后再运行 setup.sh')
+        raise ValueError('该接口未使用已安装的 WFB 驱动；重新插拔网卡或重启后再运行 scripts/setup.sh')
 
 
 def main(argv=None):
@@ -198,9 +216,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     version = check_os()
     if not args.dry_run and os.geteuid() != 0:
-        parser.error('请通过根目录 ./setup.sh 运行，或使用 sudo')
-    if not args.dry_run and not re.fullmatch('[A-Za-z0-9_./-]+', str(ROOT)):
-        raise ValueError('部署目录不能包含空格或特殊字符，请将仓库移动到简单路径')
+        parser.error('请通过根目录 ./scripts/setup.sh 运行，或使用 sudo')
     print('Ubuntu {}，Python {}.{}；回车接受方括号中的默认值。'.format(
         version, sys.version_info.major, sys.version_info.minor))
     print('首次安装会安装系统软件与 DKMS 驱动；无线网卡应为专用网卡。')
@@ -263,32 +279,21 @@ def main(argv=None):
         staging = Path(directory)
         key_dir = staging / 'keys'
         if regenerate:
-            # The shell wrapper receives the secret on stdin, not in its argv or a log.
-            run(['bash', str(ROOT / 'scripts/gen_keys.sh'), str(key_dir), '--stdin'],
-                input=seed + '\n', text=True)
+            generate_keys(key_dir, seed)
             seed = ''
-            for name in ('drone.key', 'gs.key'):
-                if (key_dir / name).stat().st_size != 64:
-                    raise ValueError('生成的密钥大小不正确，未安装配置')
         else:
             key_dir = KEYS
         profile = staging / 'wifibroadcast.cfg'
         with profile.open('w') as file:
             render_profile(settings).write(file)
-        if start:
-            run(['bash', str(ROOT / 'scripts/deploy_radio.sh'), settings['role'],
-                 settings['interface'], str(key_dir), str(profile)])
-        else:
-            for role in ('robot', 'controller'):
-                unit = 'oal-radio-' + role + '.service'
-                if subprocess.run(['systemctl', 'cat', unit], stdout=subprocess.DEVNULL,
-                                  stderr=subprocess.DEVNULL).returncode == 0:
-                    run(['systemctl', 'stop', unit])
-            run(['bash', str(ROOT / 'scripts/setup_radio.sh'), settings['role'],
-                 settings['interface'], str(key_dir), str(profile)])
+        command = ['bash', str(ROOT / 'scripts/deploy_radio.sh')]
+        if not start:
+            command.append('--configure-only')
+        command.extend([settings['role'], settings['interface'], str(key_dir), str(profile)])
+        run(command)
         write_state(settings)
     print('完成。密钥=/etc/drone.key、/etc/gs.key；配置=/etc/wifibroadcast.cfg。')
-    print('重新运行 ./setup.sh 可修改参数或重新生成密钥；请同步更新通信另一端。')
+    print('重新运行 ./scripts/setup.sh 可修改参数或重新生成密钥；请同步更新通信另一端。')
     return 0
 
 
@@ -296,7 +301,7 @@ if __name__ == '__main__':
     try:
         raise SystemExit(main())
     except (EOFError, KeyboardInterrupt):
-        print('\n输入中断，安装可能未完成；可重新运行 ./setup.sh。', file=sys.stderr)
+        print('\n输入中断，安装可能未完成；可重新运行 ./scripts/setup.sh。', file=sys.stderr)
         raise SystemExit(130)
     except (ValueError, OSError, subprocess.CalledProcessError) as exc:
         # CalledProcessError.cmd can contain secrets; deliberately omit it.

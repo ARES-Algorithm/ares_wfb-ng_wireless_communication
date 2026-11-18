@@ -31,3 +31,13 @@
 
 未在当前受限环境执行 apt 安装、DKMS 编译安装、modprobe、重启或服务配置。
 Ubuntu 24.04、ARM64 和实际网卡上的完整首次安装/重跑仍需现场验证，不能宣称已经实机全兼容。
+
+## 脚本收敛 — 2026-11-19
+
+- 用户入口从根目录 setup.sh 移到 scripts/setup.sh，支持从其他工作目录执行。
+- scripts 仅保留 setup.sh、setup_wizard.py、install_wfbng.sh、deploy_radio.sh。
+- setup_radio.sh 合入统一部署，gen_keys.sh 合入向导；systemd 直接启动固定版 WFB-NG，删除 wfb_server.sh。
+- 七项临时交互模拟通过，包含首次生成、重跑保留、取消、无副作用预览及 --configure-only 委托。
+- 合并后的密钥生成函数经真实公开测试种子验证，结果一致、密钥0600、目录0700，进程 umask 正确恢复。
+- 新入口 --help / --dry-run、外部工作目录调用、systemd 启动目标、脚本语法及 diff 检查通过。
+- 未执行真实驱动安装、网卡配置、服务重启或重启验证。已有安装需重跑新入口更新服务单元。

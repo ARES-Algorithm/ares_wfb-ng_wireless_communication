@@ -4,7 +4,7 @@ After=network.target NetworkManager.service
 
 [Service]
 Type=simple
-ExecStart=@REPO_ROOT@/scripts/wfb_server.sh controller @WLAN@
+ExecStart=/usr/local/bin/wfb-server controller @WLAN@
 Restart=on-failure
 RestartSec=3
 

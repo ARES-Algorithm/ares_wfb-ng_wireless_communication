@@ -26,7 +26,7 @@ apt-get install -y dkms git build-essential pkg-config libpcap-dev libsodium-dev
 kernel="$(uname -r)"
 if [[ ! -f "/lib/modules/$kernel/build/Makefile" ]]; then
     apt-get install -y "linux-headers-$kernel" || {
-        echo "Cannot install headers for $kernel. Install matching OEM/Jetson/Raspberry Pi headers, then rerun setup.sh." >&2
+        echo "Cannot install headers for $kernel. Install matching OEM/Jetson/Raspberry Pi headers, then rerun scripts/setup.sh." >&2
         exit 1
     }
 fi
@@ -85,7 +85,7 @@ else
 fi
 depmod -a "$kernel"
 if ! modprobe "$module_name"; then
-    echo "Cannot load $module_name. If Secure Boot is enabled, enroll the DKMS signing MOK and reboot; otherwise inspect dmesg. Then rerun setup.sh." >&2
+    echo "Cannot load $module_name. If Secure Boot is enabled, enroll the DKMS signing MOK and reboot; otherwise inspect dmesg. Then rerun scripts/setup.sh." >&2
     exit 1
 fi
 install -d /etc/modules-load.d

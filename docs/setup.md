@@ -4,7 +4,7 @@
 从克隆后的仓库根目录执行：
 
 ```bash
-./setup.sh
+./scripts/setup.sh
 ```
 
 脚本自动请求 sudo，不需要激活 Python 或 Conda 环境。网卡应作为专用无线网卡。
@@ -39,14 +39,14 @@ MCS 仍沿用模板默认值 1；底层不设置应用的发包频率。
 - 密钥安装到 /etc/drone.key 和 /etc/gs.key，权限 0600；重跑可选择重新生成。
 - 参数读取自 /etc/wifibroadcast.cfg；非秘密安装状态保存在 /etc/ares-wfb-ng/setup.json。
 - 重跑默认保留已有密钥，读取当前无线参数，网卡和芯片等默认值沿用上次成功设置。
-- 配置和密钥变更前备份到 /var/backups/wfb-config-*，服务单元备份到 /var/backups/wfb-service-*。
+- 配置和密钥变更前备份到 /var/backups/wfb-config-*，服务单元也备份在同一个目录。
 - 不修改仓库内的配置模板，不把设备密钥写入仓库。
-- 选择不启动时会停止已有本项目无线服务，再保存配置。若该服务此前已启用自启，其启用状态保持；下次开机会按新配置运行。
+- 选择不启动时会停止已有本项目无线服务，再保存配置。本机角色的已有自启状态保持，另一个角色的服务会禁用；下次开机会按新配置运行。
 
 只预览、不安装、不写文件、不操作网卡、不读取种子：
 
 ```bash
-./setup.sh --dry-run
+./scripts/setup.sh --dry-run
 ```
 
 EOF/取消应用不会开始安装；安装中途失败时会保留已完成的系统安装步骤，可重新运行修复。
@@ -69,3 +69,21 @@ EOF/取消应用不会开始安装；安装中途失败时会保留已完成的�
 上游参考：[24.08 发布说明](https://github.com/svpcom/wfb-ng/releases/tag/wfb-ng-24.08)、[EU 功率说明](https://github.com/svpcom/rtl8812eu)。
 
 实际验证范围见 verification.md；尚未在两套系统上完成真实驱动安装和重启验证。
+
+## scripts 文件职责
+
+| 文件 | 职责 |
+|---|---|
+| setup.sh | 用户入口、sudo 提权、并发锁、固定系统 Python |
+| setup_wizard.py | 交互、参数校验、配置生成、密钥生成与状态保存 |
+| install_wfbng.sh | apt 依赖、DKMS 驱动、隔离 WFB 运行环境 |
+| deploy_radio.sh | 统一备份、网卡配置、密钥/配置安装和服务管理 |
+
+`setup_radio.sh` 的逻辑已合入 `deploy_radio.sh`；后者支持 `--configure-only`，
+只配置并停止服务、不启用或启动当前角色。向导和命令行共用同一实现。
+`gen_keys.sh` 的薄封装已合入向导的密钥生成函数。
+固定版本 WFB-NG 直接由 systemd 启动，移除 `wfb_server.sh` 的旧版本和用户目录兼容分支。
+不再保留根目录 setup.sh；入口统一为 scripts/setup.sh。
+
+从旧脚本版本更新后，请重新运行 `./scripts/setup.sh`，以更新已有服务单元的启动路径。
+直接重启仍引用已删除 wfb_server.sh 的旧单元不会自动完成迁移。
