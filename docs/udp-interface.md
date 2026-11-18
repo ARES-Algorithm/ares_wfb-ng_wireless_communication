@@ -2,35 +2,31 @@
 
 ## 本机发送与本机接收
 
-首先确认运行应用的设备在安装向导中选择了哪个角色，再按对应行使用地址：
+robot 和 controller 两端采用相同的本地接口：
 
-| 本机角色 | 本机应用发送数据时填写的目标地址 | 本机应用接收数据时绑定的地址 |
+| 应用操作 | 地址 | Python 调用 |
 |---|---|---|
-| robot | `sendto(payload, ('127.0.0.1', 5642))` | `bind(('127.0.0.2', 5641))` |
-| controller | `sendto(payload, ('127.0.0.1', 5641))` | `bind(('127.0.0.2', 5642))` |
+| 发送数据给本机 WFB-NG | `127.0.0.1:5642` | `sendto(payload, ('127.0.0.1', 5642))` |
+| 接收 WFB-NG 投递的对端数据 | `127.0.0.1:5641` | `bind(('127.0.0.1', 5641))` 后 `recvfrom()` |
 
-发送时的 `127.0.0.1` 指本机 WFB-NG 的 UDP 监听端口。接收时的 `127.0.0.2` 指本机应用的 UDP 监听地址。
-两者都是 Linux 回环地址，通常由系统直接提供。本文接口适用于应用和 WFB-NG 位于同一台设备的情况。
+`127.0.0.1` 始终指运行应用的这台设备。本文接口适用于应用和 WFB-NG 位于同一台设备的情况。
 
-robot 发送的数据最终到达 controller 的 `127.0.0.2:5642`；
-controller 发送的数据最终到达 robot 的 `127.0.0.2:5641`。
-这一步跨设备传输由 WFB-NG 和无线网卡完成。
+```text
+设备 A 应用 → A 本机 127.0.0.1:5642 → 无线 → B 本机 127.0.0.1:5641 → 设备 B 应用
+设备 B 应用 → B 本机 127.0.0.1:5642 → 无线 → A 本机 127.0.0.1:5641 → 设备 A 应用
+```
 
 ## 一个应用同时发送和接收
 
-下面代码在两端各运行一份：robot 设备设 `ROLE = 'robot'`，controller 设备设 `ROLE = 'controller'`。
+下面代码可直接在两台设备上各运行一份，应用地址相同。
 双方无线服务应处于运行状态，参数及密钥匹配。
 
 ```python
 import socket
 import time
 
-ROLE = 'robot'  # controller 设备改为 'controller'
-ENDPOINTS = {
-    'robot': (('127.0.0.2', 5641), ('127.0.0.1', 5642)),
-    'controller': (('127.0.0.2', 5642), ('127.0.0.1', 5641)),
-}
-bind_address, send_target = ENDPOINTS[ROLE]
+bind_address = ('127.0.0.1', 5641)
+send_target = ('127.0.0.1', 5642)
 
 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
     sock.bind(bind_address)
@@ -39,7 +35,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
     while True:
         now = time.monotonic()
         if now >= next_send:
-            sock.sendto(('hello from ' + ROLE).encode(), send_target)
+            sock.sendto(b'hello', send_target)
             next_send = now + 1.0
         try:
             payload, _ = sock.recvfrom(65535)
@@ -48,7 +44,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             pass
 ```
 
-接收绑定和发送目标是两个独立设置。同一个 socket 可以按上述方式接收数据，并通过 `sendto()` 发送到本机 WFB-NG。
+每台设备运行一个接收进程绑定 5641。接收绑定和发送目标是两个独立设置。同一个 socket 可以按上述方式接收数据，并通过 `sendto()` 发送到本机 WFB-NG。
 接收端 `recvfrom()` 返回的来源地址属于本地 UDP 投递过程；发送方向请始终使用配置表中的固定目标。
 
 ## 无线配置中的 Stream ID

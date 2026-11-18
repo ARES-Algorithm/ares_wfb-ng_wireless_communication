@@ -31,10 +31,12 @@
 **所有下表地址都是运行该应用的设备自己的回环地址。** 应用向本机 WFB-NG 发送，
 由无线链路将数据传到另一台设备。
 
-| 你的应用运行在哪台设备 | 发送：`sendto()` 的目标地址 | 接收：`bind()` 的本机地址 | 收到谁的数据 |
-|---|---|---|---|
-| 配置为 `robot` 的设备 | `127.0.0.1:5642` | `127.0.0.2:5641` | controller 端应用 |
-| 配置为 `controller` 的设备 | `127.0.0.1:5641` | `127.0.0.2:5642` | robot 端应用 |
+两端应用使用相同地址：
+
+| 应用操作 | 本机地址 | Python 调用 |
+|---|---|---|
+| 发送到无线链路 | `127.0.0.1:5642` | `sock.sendto(payload, ('127.0.0.1', 5642))` |
+| 接收对端数据 | `127.0.0.1:5641` | `sock.bind(('127.0.0.1', 5641))` 后 `recvfrom()` |
 
 例如，robot 应用发送 `b'hello'`：
 
@@ -44,7 +46,7 @@ robot 设备                                      controller 设备
           ↓
       本机 WFB-NG ────────── 无线 ──────────→ 本机 WFB-NG
                                                    ↓
-                                  应用 bind(127.0.0.2:5642) 后 recvfrom()
+                                  应用 bind(127.0.0.1:5641) 后 recvfrom()
 ```
 
 在 **controller 设备**启动接收应用：
@@ -53,7 +55,7 @@ robot 设备                                      controller 设备
 import socket
 
 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-    sock.bind(('127.0.0.2', 5642))
+    sock.bind(('127.0.0.1', 5641))
     while True:
         payload, _ = sock.recvfrom(65535)
         print(payload)
@@ -68,10 +70,26 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
     sock.sendto(b'hello', ('127.0.0.1', 5642))
 ```
 
-controller 向 robot 发送时，目标使用本机 `127.0.0.1:5641`，robot 接收端绑定本机 `127.0.0.2:5641`。
+controller 向 robot 发送也使用本机 `127.0.0.1:5642`，robot 接收端绑定本机 `127.0.0.1:5641`。
+每台设备上的 WFB-NG 监听 5642，应用监听 5641。
 
-`127.0.0.1` 和 `127.0.0.2` 都是 Linux 回环地址，通常可直接使用。WFB-NG 根据配置在两者之间完成本地数据交接。
 完整双向示例、端口修改方法与传输约定见 [UDP 接口](docs/udp-interface.md)。
+
+## 链路角色
+
+两端具有相同的发送与接收能力，应用端口、默认频点、带宽、功率、FEC 和 MCS 一致。
+角色用于选择互补的密钥和无线流：
+
+| 配置项 | robot | controller |
+|---|---|---|
+| 密钥文件 | drone.key | gs.key |
+| 无线发送 Stream ID | 0x03 | 0x81 |
+| 无线接收 Stream ID | 0x81 | 0x03 |
+| WFB 统计端口 | 8002 | 8003 |
+| WFB API 端口 | 8102 | 8103 |
+| 服务名称 | oal-radio-robot | oal-radio-controller |
+
+一条链路两端分别选择 robot 和 controller。上层应用的消息类型和发送频率由应用决定。
 
 ## 服务管理
 
