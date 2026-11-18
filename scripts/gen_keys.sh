@@ -16,9 +16,13 @@
 # The passive monitor needs BOTH keys to decode downlink and uplink traffic.
 
 set -euo pipefail
+umask 077
 
 OUT_DIR="${1:-./config/keys}"
 PASSWORD="${2:-}"
+if [[ "$PASSWORD" == --stdin ]]; then
+    IFS= read -r PASSWORD || [[ -z "$PASSWORD" ]]
+fi
 
 if ! command -v wfb_keygen >/dev/null 2>&1; then
     echo "error: wfb_keygen not found, install wfb-ng first" >&2

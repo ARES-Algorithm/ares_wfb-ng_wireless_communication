@@ -18,23 +18,24 @@ robot/controller 仅表示链路两端的配置角色，不限制硬件和上层
 
 ## 安装和部署
 
-以下从仓库根目录执行。安装脚本会修改系统软件与驱动，部署脚本会切换无线配置和服务。
+Ubuntu 22.04 / 24.04 克隆后从仓库根目录运行：
 
 ```bash
-sudo bash scripts/install_wfbng.sh 8812eu
-# 只在一端生成一套密钥，再通过可信方式分发给另一端；不要在两端各自生成。
-bash scripts/gen_keys.sh /path/outside/repository/keys
-# 检查 config/wifibroadcast-<role>.cfg 的频点、区域、功率、带宽与 FEC。
-sudo bash scripts/deploy_radio.sh robot YOUR_WLAN /path/outside/repository/keys
-# 另一端使用 controller YOUR_WLAN 和同一套密钥。
+./setup.sh
 ```
 
-密钥最终安装为 /etc/drone.key 和 /etc/gs.key，权限 600。密钥已经在 /etc 时可省略最后一个参数。
-setup_radio.sh 只安装配置、密钥和设置接口，不启动服务；deploy_radio.sh 完成无线 systemd 服务部署。
-服务依赖仓库绝对路径；部署路径不能包含空格，移动仓库后重新部署。
+向导引导完成 DKMS 驱动安装、WFB-NG 安装、密钥种子输入、角色/网卡选择，
+以及频点、区域、功率、带宽、FEC 配置，最后部署无线服务并设置开机自启。
+再次运行同一命令可选择保留或重新生成密钥、修改配置；所有提示都有默认值。
+同一链路两端输入相同非空种子；种子留空则随机生成，需分发同一套密钥。
 
-默认配置沿用历史频点和区域设置，部署前将 wifi_region/wifi_channel 改为实际部署环境适用值。
-wifi_txpower=None 表示不显式覆盖驱动默认功率。应用控制输入包频与包长；无线参数由配置控制。
+```bash
+./setup.sh --dry-run  # 只交互预览，不安装或修改系统
+```
+
+无已有配置时默认 EU、robot、信道165、区域CN、驱动默认功率、20MHz、FEC 2/4；重跑沿用已安装配置。
+细节、默认值、系统路径、Secure Boot 与内核兼容限制见 [安装向导说明](docs/setup.md)。
+底层脚本仍可单独调用，向导是推荐入口。服务使用仓库绝对路径，移动仓库后重新运行。
 
 ## 服务与迁移
 

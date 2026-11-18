@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 # Configure a transparent UDP wireless endpoint; does not start services.
-# Usage: sudo bash scripts/setup_radio.sh robot|controller wlan [keys-directory]
+# Usage: sudo bash scripts/setup_radio.sh robot|controller wlan [keys-directory] [profile-file]
 set -euo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+unset PYTHONHOME PYTHONPATH VIRTUAL_ENV
 role="${1:-}"
 wlan="${2:-}"
 keys_src="${3:-/etc}"
 case "$role" in
     robot|controller) ;;
-    *) echo 'Usage: sudo bash scripts/setup_radio.sh robot|controller wlan [keys-directory]' >&2; exit 1 ;;
+    *) echo 'Usage: sudo bash scripts/setup_radio.sh robot|controller wlan [keys-directory] [profile-file]' >&2; exit 1 ;;
 esac
-[[ "$EUID" == 0 && -n "$wlan" && $# -le 3 ]] || {
+[[ "$EUID" == 0 && -n "$wlan" && $# -le 4 ]] || {
     echo 'Run as root and specify a wireless interface.' >&2; exit 1;
 }
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-config_src="$repo_root/config/wifibroadcast-$role.cfg"
+config_src="${4:-$repo_root/config/wifibroadcast-$role.cfg}"
 [[ -f "$config_src" ]] || { echo "Missing $config_src" >&2; exit 1; }
 # Check all inputs before changing the installed profile.
 for key in drone.key gs.key; do

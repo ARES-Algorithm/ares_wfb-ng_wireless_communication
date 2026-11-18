@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # Install configuration and a radio-only system service; never starts application traffic.
-# Usage: sudo bash scripts/deploy_radio.sh robot|controller wlan [keys-directory]
+# Usage: sudo bash scripts/deploy_radio.sh robot|controller wlan [keys-directory] [profile-file]
 set -euo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+unset PYTHONHOME PYTHONPATH VIRTUAL_ENV
 role="${1:-}"
 wlan="${2:-}"
 keys_src="${3:-/etc}"
+profile="${4:-}"
 case "$role" in
     robot) other=controller ;;
     controller) other=robot ;;
-    *) echo 'Usage: sudo bash scripts/deploy_radio.sh robot|controller wlan [keys-directory]' >&2; exit 1 ;;
+    *) echo 'Usage: sudo bash scripts/deploy_radio.sh robot|controller wlan [keys-directory] [profile-file]' >&2; exit 1 ;;
 esac
-[[ "$EUID" == 0 && -n "$wlan" && $# -le 3 ]] || {
+[[ "$EUID" == 0 && -n "$wlan" && $# -le 4 ]] || {
     echo 'Run as root and specify a wireless interface.' >&2; exit 1;
 }
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -33,7 +36,7 @@ if systemctl cat "oal-radio-$other.service" >/dev/null 2>&1; then
     systemctl disable --now "oal-radio-$other.service"
 fi
 systemctl stop "oal-radio-$role.service" 2>/dev/null || true
-bash "$repo_root/scripts/setup_radio.sh" "$role" "$wlan" "$keys_src"
+bash "$repo_root/scripts/setup_radio.sh" "$role" "$wlan" "$keys_src" "$profile"
 python3 - "$repo_root/systemd/oal-radio-$role.service" "$repo_root" "$wlan" \
     "/etc/systemd/system/oal-radio-$role.service" <<'PY'
 from pathlib import Path
