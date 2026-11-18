@@ -237,8 +237,17 @@ def main(argv=None):
                             lambda value: power(value, settings['chipset']))
     settings['bandwidth'] = ask('带宽 MHz', saved.get('bandwidth', 20),
                                 lambda value: int(choice('20', '40')(value)))
-    settings['fec_k'] = ask('FEC K（数据包数）', saved.get('fec_k', 2), number(1, 255))
-    settings['fec_n'] = ask('FEC N（总包数，含冗余）', max(saved.get('fec_n', 4), settings['fec_k']),
+    template = configparser.ConfigParser(interpolation=None)
+    template.read(str(ROOT / 'config' / ('wifibroadcast-' + settings['role'] + '.cfg')))
+    role_k = template.getint('radio_base', 'fec_k')
+    role_n = template.getint('radio_base', 'fec_n')
+    # Reuse a custom FEC only for the same role. A role switch uses its template.
+    previous_fec = saved if saved.get('role') == settings['role'] else {}
+    print('{} 角色默认 FEC：K={}、N={}；当前角色的已配置值优先显示。'.format(
+        settings['role'], role_k, role_n))
+    settings['fec_k'] = ask('FEC K（数据包数）', previous_fec.get('fec_k', role_k), number(1, 255))
+    settings['fec_n'] = ask('FEC N（总包数，含冗余）',
+                            max(previous_fec.get('fec_n', role_n), settings['fec_k']),
                             number(settings['fec_k'], 255))
     have_keys = all((KEYS / name).is_file() and (KEYS / name).stat().st_size == 64
                     for name in ('drone.key', 'gs.key'))

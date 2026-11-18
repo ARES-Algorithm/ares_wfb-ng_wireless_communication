@@ -77,11 +77,12 @@ controller 向 robot 发送也使用本机 `127.0.0.1:5642`，robot 接收端绑
 
 ## 链路角色
 
-两端具有相同的发送与接收能力，应用端口、默认频点、带宽、功率、FEC 和 MCS 一致。
+两端具有相同的发送与接收能力，应用端口、默认频点、带宽、功率和 MCS 一致，FEC 按方向配置。
 角色用于选择互补的密钥和无线流：
 
 | 配置项 | robot | controller |
 |---|---|---|
+| 默认发送 FEC | K=8、N=12 | K=1、N=3 |
 | 密钥文件 | drone.key | gs.key |
 | 无线发送 Stream ID | 0x03 | 0x81 |
 | 无线接收 Stream ID | 0x81 | 0x03 |
@@ -89,6 +90,8 @@ controller 向 robot 发送也使用本机 `127.0.0.1:5642`，robot 接收端绑
 | WFB API 端口 | 8102 | 8103 |
 | 服务名称 | oal-radio-robot | oal-radio-controller |
 
+robot 的 FEC 默认面向较大数据流，controller 的 FEC 默认面向小包控制流。
+两端各自为本端发送方向设置 FEC，接收端由 WFB-NG 会话获取对端纠错参数。
 一条链路两端分别选择 robot 和 controller。上层应用的消息类型和发送频率由应用决定。
 
 ## 服务管理
