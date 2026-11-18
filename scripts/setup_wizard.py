@@ -253,6 +253,8 @@ def select_interface(chipset, saved=None, preview=False):
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Ubuntu 22.04/24.04 交互式无线安装与配置')
     parser.add_argument('--dry-run', action='store_true', help='交互预览，不安装、不写文件、不启动服务')
+    parser.add_argument('--configure-only', action='store_true',
+                        help='安装并写入配置，不启动无线服务')
     args = parser.parse_args(argv)
     version = check_os()
     if not args.dry_run and os.geteuid() != 0:
@@ -302,7 +304,8 @@ def main(argv=None):
             if not seed or read_secret('再次输入种子: ') == seed:
                 break
             print('两次种子不一致，请重试。')
-    start = yes_no('应用后启动/重启无线服务并设置开机自启（n=仅配置，已有无线服务会停止）', True)
+    start = False if args.configure_only else yes_no(
+        '应用后启动/重启无线服务并设置开机自启（n=仅配置，已有无线服务会停止）', True)
     print('配置预览：' + json.dumps(settings, ensure_ascii=False))
     print('密钥：{}；安装：{}；启动：{}'.format('重新生成' if regenerate else '保留', install, start))
     if args.dry_run:
