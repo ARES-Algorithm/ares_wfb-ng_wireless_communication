@@ -215,13 +215,39 @@ def generate_keys(directory, seed):
         path.chmod(0o600)
 
 
+def interface_module(name):
+    module = Path('/sys/class/net') / name / 'device/driver/module'
+    return module.resolve().name.lower() if module.exists() else None
+
+
 def validate_interface(name, chipset):
     if not re.fullmatch('[A-Za-z0-9_.:-]+', name) or name not in interfaces():
-        raise ValueError('无线接口不存在，请检查网卡，必要时重新插拔后再次运行 scripts/setup.sh')
-    module = Path('/sys/class/net') / name / 'device/driver/module'
+        raise ValueError('无线接口不存在，请检查网卡后重新选择')
     expected = '8812eu' if chipset == '8812eu' else '88xxau_wfb'
-    if not module.exists() or module.resolve().name.lower() != expected:
-        raise ValueError('该接口未使用已安装的 WFB 驱动；重新插拔网卡或重启后再运行 scripts/setup.sh')
+    actual = interface_module(name)
+    if actual != expected:
+        raise ValueError('{} 使用驱动 {}，请选择使用 {} 的专用网卡'.format(
+            name, actual or '未知', expected))
+    return name
+
+
+def select_interface(chipset, saved=None, preview=False):
+    cards = interfaces()
+    expected = '8812eu' if chipset == '8812eu' else '88xxau_wfb'
+    candidates = [name for name in cards if interface_module(name) == expected]
+    if cards:
+        print('无线接口：' + ', '.join('{}（{}{}）'.format(
+            name, interface_module(name) or '未知驱动',
+            '，匹配' if name in candidates else '') for name in cards))
+    if not candidates:
+        if preview:
+            print('未检测到匹配的 WFB 网卡；此处仅预览接口名称。')
+            return ask('无线接口（仅预览）', 'wlan0')
+        raise ValueError('未检测到使用 {} 驱动的无线接口；请连接所选芯片的专用网卡后重新运行'.format(
+            expected))
+    default = saved if saved in candidates else candidates[0]
+    return ask('使用哪个无线接口' + ('（仅预览）' if preview else ''), default,
+               lambda name: validate_interface(name, chipset))
 
 
 def main(argv=None):
@@ -281,8 +307,7 @@ def main(argv=None):
     print('密钥：{}；安装：{}；启动：{}'.format('重新生成' if regenerate else '保留', install, start))
     if args.dry_run:
         print('预览模式不读取密钥种子。')
-        cards = interfaces()
-        ask('无线接口（仅预览）', saved.get('interface', cards[0] if cards else 'wlan0'))
+        select_interface(settings['chipset'], saved.get('interface'), preview=True)
         print('预览结束：未修改文件、安装软件或启动服务。')
         return 0
     if not yes_no('开始应用上述设置', True):
@@ -292,12 +317,7 @@ def main(argv=None):
         run(['bash', str(ROOT / 'scripts/install_wfbng.sh'), settings['chipset']])
     elif not runtime_ready(settings['chipset']):
         raise ValueError('未检测到完整的系统级 WFB 安装及当前内核 DKMS 驱动，请选择安装/修复')
-    cards = interfaces()
-    if not cards:
-        raise ValueError('未检测到无线网卡。驱动安装若已完成，请重新插拔网卡或重启后再次运行')
-    print('无线接口：' + ', '.join(cards))
-    settings['interface'] = ask('使用哪个无线接口', saved.get('interface', cards[0]))
-    validate_interface(settings['interface'], settings['chipset'])
+    settings['interface'] = select_interface(settings['chipset'], saved.get('interface'))
     with tempfile.TemporaryDirectory(prefix='ares-wfb-setup-') as directory:
         staging = Path(directory)
         key_dir = staging / 'keys'
