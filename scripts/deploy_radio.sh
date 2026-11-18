@@ -12,10 +12,10 @@ if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then usage; exit 0; fi
 if [[ "${1:-}" == --configure-only ]]; then configure_only=true; shift; fi
 role="${1:-}"
 wlan="${2:-}"
-keys_src="${3:-/etc}"
+keys_src="${3:-/etc/ares-wfb-ng/keys}"
 case "$role" in
-    robot) other=controller ;;
-    controller) other=robot ;;
+    robot) role_key=drone.key ;;
+    controller) role_key=gs.key ;;
     *) usage >&2; exit 1 ;;
 esac
 [[ "$EUID" == 0 && -n "$wlan" && $# -le 4 ]] || {
@@ -49,44 +49,51 @@ print(region.upper())
 PY
 )"
 backup="$(mktemp -d /var/backups/wfb-config-XXXXXXXX)"
-for target in /etc/wifibroadcast.cfg /etc/drone.key /etc/gs.key \
-    "/etc/systemd/system/oal-radio-$role.service" \
-    "/etc/systemd/system/oal-radio-$other.service"; do
-    if [[ -f "$target" ]]; then cp -a "$target" "$backup/"; fi
+for target in /etc/wifibroadcast.cfg /etc/wfb-ng/link.key /etc/ares-wfb-ng/keys \
+    /etc/systemd/system/wfb-radio.service \
+    /etc/systemd/system/oal-radio-robot.service /etc/systemd/system/oal-radio-controller.service; do
+    if [[ -e "$target" ]]; then cp --parents -a "$target" "$backup/"; fi
 done
 echo "Previous configuration, keys and service units: $backup"
-# A role switch must not leave the opposite service enabled for the next boot.
-if systemctl cat "oal-radio-$other.service" >/dev/null 2>&1; then
-    systemctl disable --now "oal-radio-$other.service"
-fi
-if systemctl cat "oal-radio-$role.service" >/dev/null 2>&1; then
-    systemctl stop "oal-radio-$role.service"
-fi
-install -m 644 "$profile" /etc/wifibroadcast.cfg
-for key in drone.key gs.key; do
-    if [[ "$keys_src/$key" -ef "/etc/$key" ]]; then
-        chmod 600 "/etc/$key"
-    else
-        install -m 600 "$keys_src/$key" "/etc/$key"
+# Retire role-specific units on hosts configured with those names, avoiding two
+# radio processes competing for the same NIC and local UDP endpoints.
+for unit in oal-radio-robot.service oal-radio-controller.service; do
+    if systemctl cat "$unit" >/dev/null 2>&1; then
+        systemctl disable --now "$unit"
     fi
 done
+if systemctl cat wfb-radio.service >/dev/null 2>&1; then
+    systemctl stop wfb-radio.service
+fi
+install -m 644 "$profile" /etc/wifibroadcast.cfg
+# Keep the complete pair privately for subsequent role changes, while the radio
+# process reads only its selected role's material at the common runtime path.
+install -d -m 700 /etc/ares-wfb-ng/keys /etc/wfb-ng
+for key in drone.key gs.key; do
+    if [[ "$keys_src/$key" -ef "/etc/ares-wfb-ng/keys/$key" ]]; then
+        chmod 600 "/etc/ares-wfb-ng/keys/$key"
+    else
+        install -m 600 "$keys_src/$key" "/etc/ares-wfb-ng/keys/$key"
+    fi
+done
+install -m 600 "/etc/ares-wfb-ng/keys/$role_key" /etc/wfb-ng/link.key
 ip link set "$wlan" up
 ip link set "$wlan" mtu 2312 || true
 ip link set "$wlan" txqueuelen 1000
 iw reg set "$region"
-/usr/bin/python3 - "$repo_root/systemd/oal-radio-$role.service" "$wlan" \
-    "/etc/systemd/system/oal-radio-$role.service" <<'PY'
+/usr/bin/python3 - "$repo_root/systemd/wfb-radio.service" "$role" "$wlan" \
+    /etc/systemd/system/wfb-radio.service <<'PYUNIT'
 from pathlib import Path
 import sys
-source, wlan, destination = sys.argv[1:]
-Path(destination).write_text(Path(source).read_text().replace('@WLAN@', wlan))
-PY
-chmod 644 "/etc/systemd/system/oal-radio-$role.service"
+source, role, wlan, destination = sys.argv[1:]
+Path(destination).write_text(Path(source).read_text().replace('@ROLE@', role).replace('@WLAN@', wlan))
+PYUNIT
+chmod 644 /etc/systemd/system/wfb-radio.service
 systemctl daemon-reload
 if "$configure_only"; then
-    echo 'Configuration installed; radio service stopped. Existing enabled state for this role is preserved.'
+    echo 'Configuration installed; wfb-radio.service stopped. Its existing enabled state is preserved.'
 else
-    systemctl enable --now "oal-radio-$role.service"
-    systemctl is-active "oal-radio-$role.service"
-    echo 'Radio service configured, started and enabled for boot.'
+    systemctl enable --now wfb-radio.service
+    systemctl is-active wfb-radio.service
+    echo 'wfb-radio.service configured, started and enabled for boot.'
 fi

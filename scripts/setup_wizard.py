@@ -19,7 +19,8 @@ import warnings
 ROOT = Path(__file__).resolve().parents[1]
 STATE = Path('/etc/ares-wfb-ng/setup.json')
 PROFILE = Path('/etc/wifibroadcast.cfg')
-KEYS = Path('/etc')
+KEYS = Path('/etc/ares-wfb-ng/keys')
+COMPAT_KEYS = Path('/etc')
 
 
 def run(command, **kwargs):
@@ -127,6 +128,19 @@ def existing_settings():
             if cfg.has_section(role):
                 saved['role'] = role
     return saved
+
+
+def existing_key_directory():
+    # Prefer private pair storage; accept pairs from preceding installations.
+    for directory in (KEYS, COMPAT_KEYS):
+        try:
+            if all((directory / name).is_file() and (directory / name).stat().st_size == 64
+                   for name in ('drone.key', 'gs.key')):
+                return directory
+        except PermissionError:
+            # A non-privileged preview cannot inspect the private key directory.
+            continue
+    return None
 
 
 def interfaces():
@@ -249,8 +263,8 @@ def main(argv=None):
     settings['fec_n'] = ask('FEC N（总包数，含冗余）',
                             max(previous_fec.get('fec_n', role_n), settings['fec_k']),
                             number(settings['fec_k'], 255))
-    have_keys = all((KEYS / name).is_file() and (KEYS / name).stat().st_size == 64
-                    for name in ('drone.key', 'gs.key'))
+    saved_keys = existing_key_directory()
+    have_keys = saved_keys is not None
     regenerate = yes_no('重新生成密钥' if have_keys else '生成密钥（首次需要）', not have_keys)
     if not regenerate and not have_keys:
         raise ValueError('没有已有密钥；请重新运行并选择生成')
@@ -291,7 +305,7 @@ def main(argv=None):
             generate_keys(key_dir, seed)
             seed = ''
         else:
-            key_dir = KEYS
+            key_dir = saved_keys
         profile = staging / 'wifibroadcast.cfg'
         with profile.open('w') as file:
             render_profile(settings).write(file)
@@ -301,7 +315,7 @@ def main(argv=None):
         command.extend([settings['role'], settings['interface'], str(key_dir), str(profile)])
         run(command)
         write_state(settings)
-    print('完成。密钥=/etc/drone.key、/etc/gs.key；配置=/etc/wifibroadcast.cfg。')
+    print('完成。运行密钥=/etc/wfb-ng/link.key；配置=/etc/wifibroadcast.cfg；服务=wfb-radio.service。')
     print('重新运行 ./scripts/setup.sh 可修改参数或重新生成密钥；请同步更新通信另一端。')
     return 0
 

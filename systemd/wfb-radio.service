@@ -1,10 +1,10 @@
 [Unit]
-Description=Transparent UDP wireless endpoint (robot)
+Description=Transparent UDP wireless endpoint
 After=network.target NetworkManager.service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/wfb-server robot @WLAN@
+ExecStart=/usr/local/bin/wfb-server @ROLE@ @WLAN@
 Restart=on-failure
 RestartSec=3
 
