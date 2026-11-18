@@ -13,6 +13,10 @@ set -euo pipefail
 
 CHIPSET="${1:-8812eu}"
 DRIVER_DIR="/usr/src"
+case "$CHIPSET" in
+    8812eu|8812au) ;;
+    *) echo 'Usage: sudo scripts/install_wfbng.sh [8812eu|8812au]' >&2; exit 1 ;;
+esac
 
 if [[ "${EUID}" -ne 0 ]]; then
     echo "error: run as root (sudo)" >&2

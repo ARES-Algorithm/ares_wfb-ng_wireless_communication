@@ -10,3 +10,6 @@ compile_commands.json
 __pycache__/
 
 captures/
+
+# Private link keys must never be committed.
+*.key
